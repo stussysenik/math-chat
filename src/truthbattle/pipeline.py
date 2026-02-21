@@ -1783,13 +1783,48 @@ async def run_tutor_stream(
             )
         except TimeoutError:
             nlg_note = f"Tutor NLG timed out after {tutor_timeout:.1f}s; used deterministic fallback."
-    fallback_text = conversational_override or _fallback_conversation(task, sympy_out)
-    if task.task_type == "explain":
-        wolfram_hint = _wolfram_fallback_conversation(tool_out)
-        if wolfram_hint:
-            fallback_text = wolfram_hint
-        elif image_urls:
-            fallback_text = _image_explain_fallback(vision_out)
+    fallback_text = conversational_override
+    if not fallback_text:
+        if task.task_type == "explain":
+            wolfram_hint = _wolfram_fallback_conversation(tool_out)
+            if wolfram_hint:
+                fallback_text = wolfram_hint
+        
+    if not fallback_text:
+        sympy_has_math_output = False
+        status = str(sympy_out.get("status", "")).strip().lower()
+        if status == "ok":
+            if task.task_type == "solve" and sympy_out.get("solutions"):
+                sympy_has_math_output = True
+            elif task.task_type in {"simplify", "differentiate", "integrate"} and str(sympy_out.get("result", "")).strip():
+                sympy_has_math_output = True
+            elif task.task_type == "ode" and (sympy_out.get("solutions") or sympy_out.get("particular_solutions")):
+                sympy_has_math_output = True
+        
+        if sympy_has_math_output:
+            fallback_text = _fallback_conversation(task, sympy_out)
+        else:
+            # Use DSPy optimization to solve word problems, images, or general queries not cleanly solved by SymPy
+            vision_text = ""
+            if vision_out:
+                vision_text = str(vision_out.get("normalized_problem", "")) or str(vision_out.get("transcription", ""))
+            
+            explain_target_text = vision_text.strip() or parse_input.strip()
+            
+            if explain_target_text:
+                yield "> **Reasoning:** Engaging dynamic tutor...\n\n"
+                
+                from truthbattle.dspy_engine import dspy_fallback_explain_async
+                dspy_answer = await dspy_fallback_explain_async(explain_target_text)
+                
+                if dspy_answer:
+                    fallback_text = dspy_answer
+                
+            if not fallback_text:
+                if image_urls and task.task_type == "explain":
+                    fallback_text = _image_explain_fallback(vision_out)
+                else:
+                    fallback_text = _fallback_conversation(task, sympy_out)
     used_glm_nlg = bool(glm_conversational)
     conversational = glm_conversational or fallback_text
     if nlg_note and opts.output_mode == "evidence":
