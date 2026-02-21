@@ -1,0 +1,35 @@
+[project]
+name = "truthbattle-math"
+version = "0.1.0"
+description = "Lean-first + SymPy verified math tutor with OpenWebUI-compatible API"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+  "celery>=5.6.2",
+  "dspy>=2.6.27",
+  "fastapi>=0.115.0",
+  "httpx>=0.27.0",
+  "numpy>=2.0.2",
+  "pydantic>=2.8.0",
+  "python-dotenv>=1.0.1",
+  "redis>=7.0.1",
+  "scipy>=1.13.1",
+  "sympy>=1.13.0",
+  "uvicorn>=0.30.0",
+  "wolframalpha>=5.1.3",
+]
+
+[project.scripts]
+truthbattle-api = "truthbattle.main:run"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/truthbattle"]
+
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
