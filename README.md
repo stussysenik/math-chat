@@ -2,6 +2,9 @@
 
 # Math Chat
 
+![Demo](demo.gif)
+
+
 Lean-first + SymPy verified math tutor with OpenWebUI-compatible API
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)
